@@ -1,0 +1,96 @@
+import datetime
+import json
+from typing import Tuple, List
+import numpy as np
+
+
+def matching(
+    md_filename: str,
+    md_key: str,
+    main_filename: str,
+    main_key: str,
+    keys_to_compare: List[str],
+    key_to_count_delta: str,
+    datetime_pattern: str,
+) -> Tuple[List[int], int, int, int]:
+    with open(md_filename) as file:
+        md = json.load(file)
+    print('From def Matching#1')
+    with open(main_filename) as file:
+        main = json.load(file)
+    print('From def Matching#2')
+
+    md_datetimes = {
+        idx: datetime.datetime.strptime(
+            el.get(key_to_count_delta), datetime_pattern
+        ).timestamp()
+        for idx, el in enumerate(md.get(md_key))
+    }
+
+    print('From def Matching#3')
+    main_datetimes = {
+        idx: datetime.datetime.strptime(
+            el.get(key_to_count_delta), datetime_pattern
+        ).timestamp()
+        for idx, el in enumerate(main.get(main_key))
+    }
+    print('From def Matching#4')
+    _deltas = []
+    print('From def Matching#5')
+
+    for md_idx, md_el in enumerate(md.get(md_key)):
+        for main_idx, main_el in enumerate(main.get(main_key)):
+
+            if (
+                sum(
+                    1
+                    for key in keys_to_compare
+                    if md_el.get(key) == main_el.get(key)
+                )
+                >= 1
+            ):
+                _deltas.append(
+
+                        main_datetimes.get(main_idx) -
+                        md_datetimes.get(md_idx)
+
+
+                )
+    print('From def Matching#6')
+    _main_bigger = len([el for el in _deltas if el > 0])
+    print('From def Matching#7')
+    _equal = len([el for el in _deltas if el == 0])
+    print('From def Matching#8')
+    _md_bigger = len([el for el in _deltas if el < 0])
+    print('From def Matching#9')
+
+    return _deltas, _md_bigger, _equal, _main_bigger
+
+
+if __name__ == "__main__":
+    deltas, md_bigger, equal, main_bigger = matching(
+        md_filename="md_primary_key.json",
+        md_key="md", #md
+        main_filename="main_primary_key.json",
+        main_key="main", #main
+        keys_to_compare=["primary_key"],
+        key_to_count_delta="platform_time",
+        datetime_pattern="%Y-%m-%d %H:%M:%S.%f",
+    )
+
+    print('deltas = ',deltas)
+    print('main_bigger = ',main_bigger)
+    print('equal = ',equal)
+    print('md_bigger = ',md_bigger)
+    print()
+    print('main_bigger ',
+          round((main_bigger / (main_bigger + md_bigger + equal)) * 100, 4), '% case')
+    print('equal',
+          round((equal / (main_bigger + md_bigger + equal)) * 100, 4), '% case')
+    print('md_bigger',
+          round((md_bigger / (main_bigger + md_bigger + equal)) * 100, 4),
+          '% case', '\n')
+
+    print("Q25 quantile of deltas_array  : ", round(np.quantile(deltas, .25), 4), 'seconds')
+    print("Q50 quantile of deltas_array  : ", round(np.quantile(deltas, .50), 4), 'seconds')
+    print("Q75 quantile of deltas_array  : ", round(np.quantile(deltas, .75), 4), 'seconds')
